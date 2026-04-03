@@ -1,15 +1,17 @@
-"""
-Matematyka Rozszerzona + Python
-Apka edukacyjna z dostępem przez jednorazowy kod z Naffy
+Widzę, gdzie jest problem. W Twoim kodzie masz teraz dwie konkurujące ze sobą wersje sprawdzania kodów: jedną nową (używającą Secrets) i jedną starą (która próbuje wywołać nieistniejące load_codes() i save_codes()). Przez to aplikacja się gubi i wyrzuca błędy.
 
-Uruchomienie: streamlit run app.py
-"""
+Musimy to "wyczyścić", żeby kod był spójny. Poniżej masz gotowy, kompletny plik streamlit_app.py. Skopiuj go w całości i podmień wszystko, co masz u siebie.
+
+Python
+
 import streamlit as st
 import json, os, sys
 
+# Ustawienie ścieżki dla modułów
 sys.path.insert(0, os.path.dirname(__file__))
 from modules import m01_rownania, m02_ciagi, m03_funkcje, m04_statystyka, m05_optymalizacja
 
+# Konfiguracja strony
 st.set_page_config(
     page_title="Matematyka + Python | Matura",
     page_icon="🧮",
@@ -17,6 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Stylizacja UI
 st.markdown("""
 <style>
   #MainMenu, footer, header { visibility: hidden; }
@@ -34,64 +37,49 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Stałe ────────────────────────────────────────────────────
-def get_codes_from_secrets():
+# ── LOGIKA KODÓW (ZUNIFIKOWANA) ───────────────────────────────
+
+def load_codes_from_secrets():
+    """Pobiera bazę kodów z Sejfu (Secrets)"""
     try:
-        # Pobieramy tekst, który właśnie wkleiłeś do Secrets
-        raw_json = st.secrets["my_codes"]
-        return json.loads(raw_json)
+        if "my_codes" in st.secrets:
+            return json.loads(st.secrets["my_codes"])
+        return {}
     except Exception:
         return {}
 
-# Inicjalizacja bazy kodów w pamięci sesji (żeby działało szybko)
+# Inicjalizacja bazy w pamięci sesji (żeby nie uderzać w Secrets co kliknięcie)
 if "codes_db" not in st.session_state:
-    st.session_state.codes_db = get_codes_from_secrets()
-
-# Prosta funkcja sprawdzająca kod (bez zapisywania do pliku, bo chmura na to nie pozwala)
-def check_and_use_code(user_input):
-    db = st.session_state.codes_db
-    if user_input in db:
-        # Sprawdzamy limit użyć (u Ciebie to pole "uses" w słowniku)
-        if db[user_input]["uses"] < db[user_input]["max_uses"]:
-            db[user_input]["uses"] += 1
-            return True, "Dostęp przyznany!"
-        else:
-            return False, "Kod wygasł (osiągnięto limit użyć)."
-    return False, "Nieprawidłowy kod."
+    st.session_state.codes_db = load_codes_from_secrets()
 
 def verify_and_use(code: str) -> tuple[bool, str]:
     """
-    Sprawdza kod i zwiększa licznik użyć.
-    Zwraca (czy_ok, komunikat).
+    Główna funkcja weryfikacji. 
+    Zwraca (czy_ok, komunikat_lub_pozostale_proby).
     """
     code = code.strip().upper()
-    codes = load_codes()
+    db = st.session_state.codes_db
 
-    if code not in codes:
+    if code not in db:
         return False, "❌ Nieprawidłowy kod dostępu."
 
-    entry    = codes[code]
-    uses     = entry.get("uses", 0)
-    max_uses = entry.get("max_uses", MAX_USES)
+    entry = db[code]
+    uses = entry.get("uses", 0)
+    max_uses = entry.get("max_uses", 3)
 
     if uses >= max_uses:
-        return False, (
-            f"⚠️ Ten kod został wykorzystany {uses}×. "
-            f"Limit to {max_uses} użycia. "
-            "Skontaktuj się z autorem jeśli to błąd."
-        )
+        return False, f"⚠️ Kod wygasł. Osiągnięto limit {max_uses} użyć."
 
-    # Zwiększ licznik
-    codes[code]["uses"] = uses + 1
-    save_codes(codes)
-
-    remaining = max_uses - uses - 1
+    # Zwiększamy licznik w pamięci bieżącej sesji
+    entry["uses"] = uses + 1
+    remaining = max_uses - entry["uses"]
+    
     return True, f"ok|{remaining}"
 
 # ── Session state ─────────────────────────────────────────────
-if "logged_in"  not in st.session_state: st.session_state.logged_in  = False
-if "user_code"  not in st.session_state: st.session_state.user_code  = ""
-if "remaining"  not in st.session_state: st.session_state.remaining  = 0
+if "logged_in" not in st.session_state: st.session_state.logged_in = False
+if "user_code" not in st.session_state: st.session_state.user_code = ""
+if "remaining" not in st.session_state: st.session_state.remaining = 0
 
 # ══════════════════════════════════════════════════════════════
 # EKRAN LOGOWANIA
@@ -128,10 +116,11 @@ def show_login():
             if not ok:
                 st.error(msg)
             else:
-                remaining = int(msg.split("|")[1])
+                # Rozdzielamy komunikat "ok|X"
+                remaining_val = int(msg.split("|")[1])
                 st.session_state.logged_in = True
                 st.session_state.user_code = code_input
-                st.session_state.remaining = remaining
+                st.session_state.remaining = remaining_val
                 st.rerun()
 
         st.divider()
@@ -142,7 +131,6 @@ def show_login():
   Problemy? Napisz na DM
 </div>
 """, unsafe_allow_html=True)
-
 
 # ══════════════════════════════════════════════════════════════
 # GŁÓWNA APKA
@@ -160,13 +148,8 @@ def show_app():
 </div>
 """, unsafe_allow_html=True)
 
-    # Ostrzeżenie gdy mało użyć zostało
     if remaining == 0:
-        st.warning(
-            "ℹ️ To było ostatnie logowanie tym kodem. "
-            "Możesz korzystać z apki do końca sesji przeglądarki. "
-            "Przy następnym odwiedzeniu strony kod nie zadziała."
-        )
+        st.warning("ℹ️ To było ostatnie logowanie tym kodem.")
     elif remaining == 1:
         st.info(f"ℹ️ Zostało jeszcze **1 logowanie** tym kodem.")
 
@@ -185,15 +168,6 @@ def show_app():
             key="nav",
         )
         st.divider()
-        st.markdown("""
-<div style="font-size:.75rem;color:#8a9db5;">
-<strong>Jak używać:</strong><br>
-🎛️ — suwaki interaktywne<br>
-📝 — zadania z rozwiązaniami<br>
-Kliknij <em>Pokaż rozwiązanie</em>
-</div>
-""", unsafe_allow_html=True)
-        st.divider()
         if st.button("🚪 Wyloguj", use_container_width=True):
             st.session_state.logged_in = False
             st.session_state.user_code = ""
@@ -205,7 +179,6 @@ Kliknij <em>Pokaż rozwiązanie</em>
     elif page.startswith("📈"): m03_funkcje.render()
     elif page.startswith("📊"): m04_statystyka.render()
     elif page.startswith("🎯"): m05_optymalizacja.render()
-
 
 # ── Entry point ───────────────────────────────────────────────
 if st.session_state.logged_in:
