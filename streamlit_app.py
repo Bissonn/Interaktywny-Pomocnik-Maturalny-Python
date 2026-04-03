@@ -35,19 +35,25 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Stałe ────────────────────────────────────────────────────
-CODES_FILE = os.path.join(os.path.dirname(__file__), "codes.json")
-MAX_USES   = 3   # ← zmień na 5 jeśli chcesz limit 5 użyć na kod
+def load_codes_from_secrets():
+    # Pobiera tekst z Secrets i zamienia go na słownik Pythona
+    raw_data = st.secrets["my_codes"]
+    return json.loads(raw_data)
 
-# ── Helpers kodów ─────────────────────────────────────────────
-def load_codes() -> dict:
-    if not os.path.exists(CODES_FILE):
-        return {}
-    with open(CODES_FILE) as f:
-        return json.load(f)
+# Inicjalizacja bazy kodów w pamięci sesji (żeby nie czytać z pliku)
+if "codes_db" not in st.session_state:
+    st.session_state.codes_db = load_codes_from_secrets()
 
-def save_codes(codes: dict):
-    with open(CODES_FILE, "w") as f:
-        json.dump(codes, f, indent=2, ensure_ascii=False)
+# ── Funkcja sprawdzająca kod ──────────────────────────────────
+def check_code(user_input):
+    db = st.session_state.codes_db
+    if user_input in db:
+        if db[user_input] < 3: # Twój limit 3 użyć
+            db[user_input] += 1
+            return True, "Kod poprawny!"
+        else:
+            return False, "Kod wygasł (limit użyć)."
+    return False, "Nieprawidłowy kod."
 
 def verify_and_use(code: str) -> tuple[bool, str]:
     """
