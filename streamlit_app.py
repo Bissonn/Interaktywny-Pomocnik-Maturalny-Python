@@ -35,24 +35,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Stałe ────────────────────────────────────────────────────
-def load_codes_from_secrets():
-    # Pobiera tekst z Secrets i zamienia go na słownik Pythona
-    raw_data = st.secrets["my_codes"]
-    return json.loads(raw_data)
+def get_codes_from_secrets():
+    try:
+        # Pobieramy tekst, który właśnie wkleiłeś do Secrets
+        raw_json = st.secrets["my_codes"]
+        return json.loads(raw_json)
+    except Exception:
+        return {}
 
-# Inicjalizacja bazy kodów w pamięci sesji (żeby nie czytać z pliku)
+# Inicjalizacja bazy kodów w pamięci sesji (żeby działało szybko)
 if "codes_db" not in st.session_state:
-    st.session_state.codes_db = load_codes_from_secrets()
+    st.session_state.codes_db = get_codes_from_secrets()
 
-# ── Funkcja sprawdzająca kod ──────────────────────────────────
-def check_code(user_input):
+# Prosta funkcja sprawdzająca kod (bez zapisywania do pliku, bo chmura na to nie pozwala)
+def check_and_use_code(user_input):
     db = st.session_state.codes_db
     if user_input in db:
-        if db[user_input] < 3: # Twój limit 3 użyć
-            db[user_input] += 1
-            return True, "Kod poprawny!"
+        # Sprawdzamy limit użyć (u Ciebie to pole "uses" w słowniku)
+        if db[user_input]["uses"] < db[user_input]["max_uses"]:
+            db[user_input]["uses"] += 1
+            return True, "Dostęp przyznany!"
         else:
-            return False, "Kod wygasł (limit użyć)."
+            return False, "Kod wygasł (osiągnięto limit użyć)."
     return False, "Nieprawidłowy kod."
 
 def verify_and_use(code: str) -> tuple[bool, str]:
