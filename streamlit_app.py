@@ -1,9 +1,3 @@
-Widzę, gdzie jest problem. W Twoim kodzie masz teraz dwie konkurujące ze sobą wersje sprawdzania kodów: jedną nową (używającą Secrets) i jedną starą (która próbuje wywołać nieistniejące load_codes() i save_codes()). Przez to aplikacja się gubi i wyrzuca błędy.
-
-Musimy to "wyczyścić", żeby kod był spójny. Poniżej masz gotowy, kompletny plik streamlit_app.py. Skopiuj go w całości i podmień wszystko, co masz u siebie.
-
-Python
-
 import streamlit as st
 import json, os, sys
 
