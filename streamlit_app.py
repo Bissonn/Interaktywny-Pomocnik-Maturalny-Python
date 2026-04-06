@@ -59,7 +59,7 @@ def verify_and_use(code: str) -> tuple[bool, str]:
 
     entry = db[code]
     uses = entry.get("uses", 0)
-    max_uses = entry.get("max_uses", 3)
+    max_uses = entry.get("max_uses", 13)
 
     if uses >= max_uses:
         return False, f"⚠️ Kod wygasł. Osiągnięto limit {max_uses} użyć."
