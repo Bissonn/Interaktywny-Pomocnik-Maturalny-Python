@@ -13,7 +13,7 @@ def render():
             "Trygonometryczna: A·sin(Bx + C) + D",
             "Wykładnicza: a · qˣ",
             "Logarytmiczna: log_a(x)",
-            "Sześcienna: ax³ + bx + c",
+            "Sześcienna: ax³ + bx² + cx + d",
         ], key="fn_type")
 
         x = np.linspace(-4*np.pi, 4*np.pi, 1000)
@@ -91,16 +91,17 @@ def render():
                         f"log_{base}(1) = 0  |  log_{base}({base}) = 1")
 
         else:  # Sześcienna
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3 = st.columns(4)
             with col1: a3 = st.slider("a (x³)", -3.0, 3.0, 1.0, 0.5, key="s3a")
-            with col2: b3 = st.slider("b (x)",  -5.0, 5.0,-3.0, 0.5, key="s3b")
-            with col3: c3 = st.slider("c",      -5.0, 5.0, 0.0, 0.5, key="s3c")
+            with col2: b3 = st.slider("b (x²)", -3.0, 3.0, 1.0, 0.5, key="s3b")
+            with col3: c3 = st.slider("c (x)",  -5.0, 5.0,-3.0, 0.5, key="s3c")
+            with col4: d3 = st.slider("d",      -5.0, 5.0, 0.0, 0.5, key="s3d")
 
             x_plot = np.linspace(-4, 4, 500)
-            y = a3*x_plot**3 + b3*x_plot + c3
+            y = a3*x_plot**3 + b3*x_plot**2 + c3*x_plot + d3
             fig, ax = plt.subplots(figsize=(9, 4))
             ax.plot(x_plot, y, "#1a4f8a", lw=2.5,
-                    label=f"f(x) = {a3}x³ + ({b3})x + ({c3})")
+                    label=f"f(x) = {a3}x³ + {b3}x² + {c3}x + {d3}")
             ax.axhline(0, color="k", lw=0.8); ax.axvline(0, color="k", lw=0.8)
             ax.set_ylim(-20, 20)
             ax.legend(); ax.grid(True, alpha=0.3)
