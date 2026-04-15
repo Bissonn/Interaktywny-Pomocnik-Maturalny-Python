@@ -91,7 +91,7 @@ def render():
                         f"log_{base}(1) = 0  |  log_{base}({base}) = 1")
 
         else:  # Sześcienna
-            col1, col2, col3 = st.columns(4)
+            col1, col2, col3, col4 = st.columns(4)
             with col1: a3 = st.slider("a (x³)", -3.0, 3.0, 1.0, 0.5, key="s3a")
             with col2: b3 = st.slider("b (x²)", -3.0, 3.0, 1.0, 0.5, key="s3b")
             with col3: c3 = st.slider("c (x)",  -5.0, 5.0,-3.0, 0.5, key="s3c")
